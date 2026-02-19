@@ -1,16 +1,25 @@
 import chalk from "chalk"
-import { pkgUpSync } from "pkg-up"
-import {readFileSync} from "fs"
+import {cosmiconfigSync} from 'cosmiconfig'
+const  configloader = cosmiconfigSync('tool')
+import schema from "./schema.json"  with { type: "json" };
+import Ajv from 'ajv'
+import betterajverror from "better-ajv-errors"
+const ajv = new Ajv({jsonPointers: true})
 
-module.export = function getConfig() {
-    const pkgpath = pkgUpSync({cwd : process.cwd() })
-    const pkg = JSON.parse(readFileSync(pkgpath), 'utf8')
-    if(pkg.tool) {
-		console.log('Found config', pkg.tool);
-        return pkg.tool;
-	} else {
-		console.log(chalk.yellow("Coundn't find config, using default"))
-        return {port: 1234}
-	}
-
+export default function getConfig() {
+    const result = configloader.search(process.cwd())
+    if(!result) {
+        console.log(chalk.yellow("could not find config, using default"))
+        return {port : 1234}
+    } else {
+        const isValid = ajv.validate(schema, result.config)
+        if(!isValid){
+            console.log(chalk.yellow("Invalid config was passed"))
+            console.log()
+            console.log(betterajverror(schema, result.config, ajv.errors))
+            process.exit(1)
+        }
+            console.log("found config ", result.config)
+            return result.config;   
+    }
 }
