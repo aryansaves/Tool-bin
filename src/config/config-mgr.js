@@ -1,25 +1,31 @@
-import chalk from "chalk"
+import createLogger from "../logger.js"
+const logger = createLogger('config')
+
 import {cosmiconfigSync} from 'cosmiconfig'
-const  configloader = cosmiconfigSync('tool')
+const  configloader = cosmiconfigSync('toolt')
 import schema from "./schema.json"  with { type: "json" };
 import Ajv from 'ajv'
 import betterajverror from "better-ajv-errors"
-const ajv = new Ajv({jsonPointers: true})
+const ajv = new Ajv( {
+    strict: false
+})
+
+
 
 export default function getConfig() {
-    const result = configloader.search(process.cwd())
+    const result = configloader.search()
     if(!result) {
-        console.log(chalk.yellow("could not find config, using default"))
+        logger.warning("could not find config, using default")
         return {port : 1234}
     } else {
         const isValid = ajv.validate(schema, result.config)
         if(!isValid){
-            console.log(chalk.yellow("Invalid config was passed"))
+            logger.warning("Invalid config was passed")
             console.log()
             console.log(betterajverror(schema, result.config, ajv.errors))
             process.exit(1)
         }
-            console.log("found config ", result.config)
+            logger.debug("found config ", result.config)
             return result.config;   
     }
 }
